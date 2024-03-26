@@ -35,18 +35,21 @@ public class Term implements Flushable, Closeable, EventTarget {
     }
 
     public Screen fullScreen() {
-        Size size = size();
-        return sizedScreen(size.width(), size.height());
+        return sizedScreen(-1, -1);
+    }
+
+    public Screen wideScreen(int height) {
+        return sizedScreen(-1, height);
     }
 
     public Screen sizedScreen(int width, int height) {
-        if (width == 0) {
-            width = 80;
-        }
-        if (height == 0) {
-            height = 40;
-        }
-        return new ScreenImpl(this, width, height);
+        return screen(0, 0, width, height);
+    }
+
+    public Screen screen(int left, int top, int width, int height) {
+        assert left >= 0;
+        assert top >= 0;
+        return new ScreenImpl(this, 0, 0, width, height);
     }
 
     public Input input() {
@@ -54,7 +57,7 @@ public class Term implements Flushable, Closeable, EventTarget {
     }
 
     @Override
-    public void flush() throws IOException {
+    public void flush() {
         terminal.flush();
     }
 

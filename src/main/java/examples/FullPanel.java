@@ -27,6 +27,15 @@ public class FullPanel {
 
     public int run() throws IOException {
         Screen screen = term.fullScreen();
+        draw(screen);
+
+        screen.update();
+        term.input().readChar();
+
+        return 0;
+    }
+
+    private void draw(Screen screen) throws IOException {
         int displayWidth = screen.rect().width();
         int displayHeight = screen.rect().height();
 
@@ -38,11 +47,6 @@ public class FullPanel {
         cb.append(displayWidth + "x" + displayHeight);
         screen.printAt(
                 displayWidth / 2 - cb.length() / 2, displayHeight / 2, cb.toAttributedString());
-
-        screen.update();
-        term.input().readChar();
-
-        return 0;
     }
 
     private Box createBox(int w, int h) {

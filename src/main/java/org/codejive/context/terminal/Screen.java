@@ -3,6 +3,9 @@ package org.codejive.context.terminal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.codejive.context.events.Event;
+import org.codejive.context.events.EventEmitter;
+import org.codejive.context.events.EventTarget;
 import org.jline.utils.AttributedCharSequence;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStringBuilder;
@@ -16,20 +19,30 @@ public interface Screen extends Rectangular {
     void update();
 }
 
-class ScreenImpl implements Screen {
-    private final Rect rect;
+class ScreenImpl implements Screen, EventTarget {
+    private final Term term;
+    private final FlexRect flexRect;
     private final Display display;
     private AttributedStringBuilder[] lines;
 
+    final EventEmitter<ScreenResizeEvent> onResize = new EventEmitter<>();
+
     @Override
     public Rect rect() {
-        return rect;
+        return flexRect.actualRect(term.size());
     }
 
-    protected ScreenImpl(Term term, int width, int height) {
-        this.rect = new Rect(0, 0, width, height);
+    protected ScreenImpl(Term term, int left, int top, int width, int height) {
+        this(term, new FlexRect(left, top, width, height));
+    }
+
+    protected ScreenImpl(Term term, FlexRect flexRect) {
+        this.term = term;
+        this.flexRect = flexRect;
         this.display = new Display(term.terminal, false);
-        this.display.resize(height, width);
+        term.onResize.addListener(this::handleTermResizeEvent);
+        Rect r = rect();
+        this.display.resize(r.height(), r.width());
         clear();
     }
 
@@ -65,7 +78,7 @@ class ScreenImpl implements Screen {
             line.setLength(x);
             line.append(str);
         } else {
-            AttributedStringBuilder ln = new AttributedStringBuilder(rect.width());
+            AttributedStringBuilder ln = new AttributedStringBuilder(rect().width());
             ln.append(line.substring(0, x));
             ln.append(str);
             ln.append(line.substring(x + str.length(), line.length()));
@@ -87,5 +100,28 @@ class ScreenImpl implements Screen {
 
     public void update() {
         display.update(lines(), 0);
+    }
+
+    public class ScreenResizeEvent implements Event {
+        private final Size size;
+
+        public ScreenResizeEvent(Size size) {
+            this.size = size;
+        }
+
+        public Size size() {
+            return size;
+        }
+
+        @Override
+        public EventTarget target() {
+            return ScreenImpl.this;
+        }
+    }
+
+    private void handleTermResizeEvent(Term.TermResizeEvent event) {
+        System.out.println("RESIZE EVENT: " + event.size());
+        // Check if the new size affects this Screen
+        onResize.dispatch(new ScreenResizeEvent(rect()));
     }
 }
